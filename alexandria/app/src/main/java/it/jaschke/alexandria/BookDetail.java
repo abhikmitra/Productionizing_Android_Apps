@@ -3,6 +3,8 @@ package it.jaschke.alexandria;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.ResultReceiver;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
@@ -26,6 +28,7 @@ import it.jaschke.alexandria.services.DownloadImage;
 public class BookDetail extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
     public static final String EAN_KEY = "EAN";
+    public static final String CALBACK_KEY = "CALLBACK";
     private final int LOADER_ID = 10;
     private View rootView;
     private String ean;
@@ -58,8 +61,15 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
                 bookIntent.putExtra(BookService.EAN, ean);
                 bookIntent.setAction(BookService.DELETE_BOOK);
+                bookIntent.putExtra(BookDetail.CALBACK_KEY, new ResultReceiver(new Handler()) {
+                    @Override
+                    protected void onReceiveResult(int resultCode, Bundle resultData) {
+                        super.onReceiveResult(resultCode, resultData);
+                        getActivity().getSupportFragmentManager().popBackStack();
+                    }
+                });
                 getActivity().startService(bookIntent);
-                getActivity().getSupportFragmentManager().popBackStack();
+
             }
         });
         return rootView;
@@ -138,4 +148,5 @@ public class BookDetail extends Fragment implements LoaderManager.LoaderCallback
             getActivity().getSupportFragmentManager().popBackStack();
         }
     }
+
 }

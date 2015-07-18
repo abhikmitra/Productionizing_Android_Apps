@@ -3,7 +3,9 @@ package it.jaschke.alexandria;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.database.Cursor;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
@@ -19,7 +21,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.client.android.CaptureActivity;
 
 import it.jaschke.alexandria.data.AlexandriaContract;
 import it.jaschke.alexandria.services.BookService;
@@ -51,13 +53,43 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         }
     }
 
+    public static String maskISBN(String[] raw){
+        String mask = "###-#-##-######-#";
+        String[] maskArr = mask.split("");
+        int count = 0;
+        String result = "";
+        for(String m : maskArr){
+            if(m.equals("")){
+                continue;
+            }
+            if(m.equals("#")){
+                if(raw[count].equals("")){
+                    count++;
+                    if(count == raw.length){
+                        break;
+                    }
+                }
+                result += raw[count];
+                count++;
+                if(count == raw.length){
+                    break;
+                }
+            } else {
+                result+=m;
+            }
+        }
+        return result;
+    }
+
     @Override
     public View onCreateView(final LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
         rootView = inflater.inflate(R.layout.fragment_add_book, container, false);
         ean = (EditText) rootView.findViewById(R.id.ean);
-
+        //ean.setFilters(new InputFilter[]{new ISBNInputFilter()});
+        ean.setRawInputType(Configuration.KEYBOARD_12KEY);
         ean.addTextChangedListener(new TextWatcher() {
+            private boolean mSelfChange = false;
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                 //no need
@@ -66,22 +98,31 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 //no need
+
+
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
-                String ean =s.toString();
-                //catch isbn10 numbers
-                if(ean.length()==10 && !ean.startsWith("978")){
-                    ean="978"+ean;
-                }
-                if(ean.length()<13){
-                    clearFields();
+            public synchronized void  afterTextChanged(Editable s) {
+                if(mSelfChange){
                     return;
                 }
-                //Once we have an ISBN, start a book intent
+                String[] valueArr = s.toString().replace("-", "").split("");
+                mSelfChange = true;
+                s.clear();
+                s.append(maskISBN(valueArr));
+                String eanString = s.toString().replace("-", "");
+                mSelfChange = false;
+                if(eanString.length()<13){
+                    clearFields();
+
+                    ean.getBackground().setColorFilter(getResources().getColor(R.color.red), PorterDuff.Mode.SRC_IN);
+
+                    return;
+                }
+                ean.getBackground().setColorFilter(null);
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
-                bookIntent.putExtra(BookService.EAN, ean);
+                bookIntent.putExtra(BookService.EAN, eanString);
                 bookIntent.setAction(BookService.FETCH_BOOK);
                 getActivity().startService(bookIntent);
                 AddBook.this.restartLoader();
@@ -97,14 +138,15 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
                 // Hint: Use a Try/Catch block to handle the Intent dispatch gracefully, if you
                 // are using an external app.
                 //when you're done, remove the toast below.
+//                IntentIntegrator integrator = new IntentIntegrator(getActivity());
+//                integrator.initiateScan();
                 Context context = getActivity();
                 CharSequence text = "This button should let you scan a book for its barcode!";
                 int duration = Toast.LENGTH_SHORT;
-                IntentIntegrator integrator = new IntentIntegrator(getActivity());
-                integrator.initiateScan();
-
-                Toast toast = Toast.makeText(context, text, duration);
-                toast.show();
+                // IntentResult
+                Intent intent = new Intent(getActivity(), CaptureActivity.class);
+                intent.putExtra("com.google.zxing.client.android.SCAN.SCAN_MODE", "QR_CODE_MODE");
+                startActivityForResult(intent, 0);
 
             }
         });
@@ -120,7 +162,7 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
             @Override
             public void onClick(View view) {
                 Intent bookIntent = new Intent(getActivity(), BookService.class);
-                bookIntent.putExtra(BookService.EAN, ean.getText().toString());
+                bookIntent.putExtra(BookService.EAN, ean.getText().toString().replace("-", ""));
                 bookIntent.setAction(BookService.DELETE_BOOK);
                 getActivity().startService(bookIntent);
                 ean.setText("");
@@ -134,7 +176,21 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
 
         return rootView;
     }
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        if (requestCode == 0) {
+            if (resultCode == getActivity().RESULT_OK) {
+                String contents =
+                        intent.getStringExtra("SCAN_RESULT");
+                String format = intent.getStringExtra("SCAN_RESULT_FORMAT");
+                if(format.equals("EAN_13")){
+                    ean.setText(contents);
+                }
 
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, intent);
+    }
     private void restartLoader(){
         getLoaderManager().restartLoader(LOADER_ID, null, this);
     }
@@ -144,10 +200,8 @@ public class AddBook extends Fragment implements LoaderManager.LoaderCallbacks<C
         if(ean.getText().length()==0){
             return null;
         }
-        String eanStr= ean.getText().toString();
-        if(eanStr.length()==10 && !eanStr.startsWith("978")){
-            eanStr="978"+eanStr;
-        }
+        String eanStr= ean.getText().toString().replace("-", "");
+
         return new CursorLoader(
                 getActivity(),
                 AlexandriaContract.BookEntry.buildFullBookUri(Long.parseLong(eanStr)),

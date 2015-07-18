@@ -1,10 +1,12 @@
 package it.jaschke.alexandria.services;
 
+import android.app.Activity;
 import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.ResultReceiver;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -19,8 +21,10 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import it.jaschke.alexandria.BookDetail;
 import it.jaschke.alexandria.MainActivity;
 import it.jaschke.alexandria.R;
+import it.jaschke.alexandria.Utility;
 import it.jaschke.alexandria.data.AlexandriaContract;
 
 
@@ -50,8 +54,14 @@ public class BookService extends IntentService {
                 final String ean = intent.getStringExtra(EAN);
                 fetchBook(ean);
             } else if (DELETE_BOOK.equals(action)) {
+                ResultReceiver resultReceiver = intent.getParcelableExtra(BookDetail.CALBACK_KEY);
                 final String ean = intent.getStringExtra(EAN);
                 deleteBook(ean);
+                if(resultReceiver!=null){
+                    resultReceiver.send(Activity.RESULT_OK, null);
+                }
+
+
             }
         }
     }
@@ -75,7 +85,12 @@ public class BookService extends IntentService {
         if(ean.length()!=13){
             return;
         }
-
+        if(!Utility.isNetworkAvailable(getApplicationContext())){
+            Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
+            messageIntent.putExtra(MainActivity.MESSAGE_KEY,getResources().getString(R.string.internet_not_available));
+            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+            return;
+        }
         Cursor bookEntry = getContentResolver().query(
                 AlexandriaContract.BookEntry.buildBookUri(Long.parseLong(ean)),
                 null, // leaving "columns" null just returns all the columns.
@@ -155,7 +170,12 @@ public class BookService extends IntentService {
         final String CATEGORIES = "categories";
         final String IMG_URL_PATH = "imageLinks";
         final String IMG_URL = "thumbnail";
-
+        if(bookJsonString==null){
+            Intent messageIntent = new Intent(MainActivity.MESSAGE_EVENT);
+            messageIntent.putExtra(MainActivity.MESSAGE_KEY,getResources().getString(R.string.no_internet));
+            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(messageIntent);
+            return;
+        }
         try {
             JSONObject bookJson = new JSONObject(bookJsonString);
             JSONArray bookArray;
@@ -230,4 +250,4 @@ public class BookService extends IntentService {
             values= new ContentValues();
         }
     }
- }
+}
