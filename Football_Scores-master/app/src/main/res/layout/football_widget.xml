@@ -1,0 +1,16 @@
+<LinearLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="@dimen/widget_margin" android:id="@+id/football_container">
+
+    <TextView android:id="@+id/appwidget_text" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="@string/appwidget_text"
+        android:background="#C62828"
+
+        android:textColor="#ffffff" android:textSize="24sp" android:textStyle="bold"
+        android:contentDescription="@string/appwidget_text" android:padding="8dp" />
+    <ListView android:id="@+id/footbal_listView" android:background="#000000"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"  android:textColor="#000000">
+
+    </ListView>
+</LinearLayout >

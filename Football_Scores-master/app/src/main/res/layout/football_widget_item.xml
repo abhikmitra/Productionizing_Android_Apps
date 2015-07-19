@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:background="#ffffff"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android" android:padding="8dp">
+    <TextView
+        android:id="@+id/football_widget_game_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:text="Hello World"
+        android:textColor="@color/background_floating_material_dark"
+        xmlns:android="http://schemas.android.com/apk/res/android" />
+
+    <TextView
+        android:id="@+id/football_widget_match_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="10sp"
+        android:textStyle="italic"
+        android:text="Hello World"
+        android:textColor="@color/background_floating_material_dark"
+        xmlns:android="http://schemas.android.com/apk/res/android" />
+    <TextView
+        android:id="@+id/football_widget_score"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="10sp"
+        android:textStyle="italic"
+        android:text="Hello World"
+        android:textColor="@color/background_floating_material_dark"
+        xmlns:android="http://schemas.android.com/apk/res/android" />
+
+</LinearLayout>
